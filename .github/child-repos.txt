@@ -1,0 +1,12 @@
+# Child repos to receive template sync PRs
+# Format: owner/repo  (one per line)
+# Lines starting with # and blank lines are ignored
+
+culturedatacommons/harvester-dcla-programs-funding
+culturedatacommons/harvester-art-in-doe-buildings
+culturedatacommons/harvester-outdoor-public-art-inventory
+culturedatacommons/harvester-nyc-public-school-indicators
+culturedatacommons/harvester-citywide-marketing-directory
+culturedatacommons/harvester-nyc-parks-monuments
+culturedatacommons/harvester-parks-permit-areas
+culturedatacommons/harvester-parks-permit-areas-map
