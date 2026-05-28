@@ -19,6 +19,7 @@ export interface PortalJsCloudDataset {
   contact_point?: string;
   resources?: CkanResource[];
   tags?: {name: string}[];
+  groups?: { name: string; title?: string }[];
   extras?: { key: string; value: string }[];
 }
 

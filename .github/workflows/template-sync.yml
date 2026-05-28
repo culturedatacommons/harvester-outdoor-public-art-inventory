@@ -1,0 +1,91 @@
+name: Sync Template to Child Repos
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout template
+        uses: actions/checkout@v4
+
+      - name: Sync to child repos
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          TEMPLATE_URL="https://github.com/${{ github.repository }}.git"
+          BRANCH="template-sync"
+
+          while IFS= read -r repo || [[ -n "$repo" ]]; do
+            # Skip comments and blank lines
+            [[ "$repo" =~ ^#.*$ || -z "$repo" ]] && continue
+
+            echo "--- Syncing $repo ---"
+
+            git clone "https://x-access-token:${GH_TOKEN}@github.com/${repo}.git" child-repo
+            cd child-repo
+
+            # Detect default branch
+            DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
+
+            # Fetch template
+            git remote add template "$TEMPLATE_URL"
+            git fetch template main --no-tags
+
+            # Create sync branch from child's default branch
+            git checkout -b "$BRANCH" "origin/$DEFAULT_BRANCH"
+
+            # Attempt merge; capture conflicted state if it fails
+            MERGE_STATUS="clean"
+            if ! git merge template/main --allow-unrelated-histories \
+                   -m "chore: sync updates from template"; then
+              MERGE_STATUS="conflicts"
+              git add -A
+              git commit -m "chore: sync updates from template (conflicts need resolution)"
+            fi
+
+            # Skip if nothing changed relative to default branch
+            if git diff "origin/$DEFAULT_BRANCH" --quiet; then
+              echo "No changes for $repo — skipping"
+              cd ..
+              rm -rf child-repo
+              continue
+            fi
+
+            # Push sync branch
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${repo}.git" \
+              "$BRANCH" --force
+
+            # Open PR if one doesn't already exist
+            EXISTING_PR=$(gh pr list --repo "$repo" --head "$BRANCH" \
+              --json number --jq '.[0].number // empty')
+
+            if [[ -n "$EXISTING_PR" ]]; then
+              echo "PR #$EXISTING_PR already open for $repo — updated by force-push"
+            else
+              if [[ "$MERGE_STATUS" == "conflicts" ]]; then
+                BODY="This PR syncs updates from the [template repository](https://github.com/${{ github.repository }}).
+
+          > ⚠️ **This PR contains conflict markers (\`<<<<<<<\`) in one or more files.** The changes from the template conflicted with local modifications in this repo. You'll need to resolve them manually (search for \`<<<<<<<\`) before merging — GitHub will show \`No conflicts with base branch\` regardless, since that only checks whether the PR branch can be merged, not whether the file contents are valid."
+              else
+                BODY="This PR syncs updates from the [template repository](https://github.com/${{ github.repository }})."
+              fi
+
+              gh pr create \
+                --repo "$repo" \
+                --head "$BRANCH" \
+                --base "$DEFAULT_BRANCH" \
+                --title "chore: sync updates from template" \
+                --body "$BODY"
+            fi
+
+            cd ..
+            rm -rf child-repo
+
+          done < .github/child-repos.txt
