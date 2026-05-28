@@ -49,13 +49,6 @@ class SocrataSingleDatasetHarvester extends SocrataHarvester {
           language: existing.language || dataset.language,
           coverage: existing.coverage || dataset.coverage,
           rights: existing.rights || dataset.rights,
-<<<<<<< HEAD
-          contact_point: existing.contact_point || dataset.contact_point,
-          license_id: existing.license_id || dataset.license_id,
-          version: existing.version || dataset.version,
-          // Keep existing tags if already set
-          tags: existing.tags?.length ? existing.tags : dataset.tags,
-=======
           conforms_to: existing.conforms_to || dataset.conforms_to,
           has_version: existing.has_version || dataset.has_version,
           is_version_of: existing.is_version_of || dataset.is_version_of,
@@ -66,7 +59,6 @@ class SocrataSingleDatasetHarvester extends SocrataHarvester {
           // Keep existing tags/groups if already set
           tags: existing.tags?.length ? existing.tags : dataset.tags,
           groups: existing.groups?.length ? existing.groups : dataset.groups,
->>>>>>> template/main
           // Merge extras: prefer existing values for matching keys, always update Last Harvested At
           extras: mergeExtras(existing.extras ?? [], dataset.extras ?? []),
           // Update resources but preserve existing descriptions
